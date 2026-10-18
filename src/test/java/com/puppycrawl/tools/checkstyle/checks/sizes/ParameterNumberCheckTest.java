@@ -52,6 +52,8 @@ public class ParameterNumberCheckTest extends AbstractModuleTestSupport {
         final int[] expected = {
             TokenTypes.METHOD_DEF,
             TokenTypes.CTOR_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.RECORD_DEF,
         };
 
         assertWithMessage("Default acceptable tokens are invalid")
@@ -168,6 +170,54 @@ public class ParameterNumberCheckTest extends AbstractModuleTestSupport {
         verifyWithInlineConfigParser(
                 getPath("InputParameterNumberIgnoreAnnotatedByFullyQualifiedClassName.java"),
                 expected);
+    }
+
+    @Test
+    public void testCompactDefault() throws Exception {
+        final String[] expected = {
+            "16:6: " + getCheckMessage(MSG_KEY, 7, 8),
+            "20:6: " + getCheckMessage(MSG_KEY, 7, 8),
+            "24:10: " + getCheckMessage(MSG_KEY, 7, 8),
+            "29:5: " + getCheckMessage(MSG_KEY, 7, 8),
+            "33:17: " + getCheckMessage(MSG_KEY, 7, 8),
+        };
+        verifyWithInlineConfigParser(
+                getNonCompilablePath("compact/InputParameterNumberCompactDefault.java"), expected);
+    }
+
+    @Test
+    public void testCompactProperties() throws Exception {
+        final String[] expected = {
+            "20:6: " + getCheckMessage(MSG_KEY, 2, 3),
+            "30:6: " + getCheckMessage(MSG_KEY, 2, 3),
+            "34:10: " + getCheckMessage(MSG_KEY, 2, 3),
+            "39:5: " + getCheckMessage(MSG_KEY, 2, 3),
+        };
+        verifyWithInlineConfigParser(
+                getNonCompilablePath("compact/InputParameterNumberCompactProperties.java"),
+                expected);
+    }
+
+    @Test
+    public void testRecords() throws Exception {
+        final String[] expected = {
+            "16:12: " + getCheckMessage(MSG_KEY, 7, 8),
+            "27:16: " + getCheckMessage(MSG_KEY, 7, 8),
+            "38:16: " + getCheckMessage(MSG_KEY, 7, 8),
+            "51:12: " + getCheckMessage(MSG_KEY, 7, 8),
+        };
+        verifyWithInlineConfigParser(
+                getPath("InputParameterNumberRecords.java"), expected);
+    }
+
+    @Test
+    public void testRecordsIgnoreAnnotatedBy() throws Exception {
+        final String[] expected = {
+            "23:16: " + getCheckMessage(MSG_KEY, 2, 3),
+            "32:12: " + getCheckMessage(MSG_KEY, 2, 3),
+        };
+        verifyWithInlineConfigParser(
+                getPath("InputParameterNumberRecordsIgnoreAnnotatedBy.java"), expected);
     }
 
 }

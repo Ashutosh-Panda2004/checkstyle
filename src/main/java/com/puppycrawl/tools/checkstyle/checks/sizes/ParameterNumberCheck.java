@@ -101,7 +101,12 @@ public class ParameterNumberCheck extends AbstractCheck {
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.METHOD_DEF, TokenTypes.CTOR_DEF};
+        return new int[] {
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.RECORD_DEF,
+        };
     }
 
     @Override
@@ -111,8 +116,77 @@ public class ParameterNumberCheck extends AbstractCheck {
 
     @Override
     public void visitToken(DetailAST ast) {
-        final DetailAST params = ast.findFirstToken(TokenTypes.PARAMETERS);
-        final int count = params.getChildCount(TokenTypes.PARAMETER_DEF);
+        if (ast.getType() == TokenTypes.RECORD_DEF) {
+            visitRecordDef(ast);
+        }
+        else if (ast.getType() == TokenTypes.COMPACT_CTOR_DEF) {
+            final DetailAST recordDef = ast.getParent().getParent();
+            logRecordComponentCount(ast, recordDef);
+        }
+        else {
+            final DetailAST params = ast.findFirstToken(TokenTypes.PARAMETERS);
+            final int count = params.getChildCount(TokenTypes.PARAMETER_DEF);
+            if (count > max && !shouldIgnoreNumberOfParameters(ast)) {
+                final DetailAST name = ast.findFirstToken(TokenTypes.IDENT);
+                log(name, MSG_KEY, max, count);
+            }
+        }
+    }
+
+    /**
+     * Processes a record definition. A record whose canonical constructor is not
+     * declared explicitly, neither in long form nor as a compact constructor, has
+     * no constructor node to visit, so the number of its components, which is the
+     * parameter count of the implicit canonical constructor, is checked here.
+     *
+     * @param recordDef the record definition to process
+     */
+    private void visitRecordDef(DetailAST recordDef) {
+        final DetailAST components = recordDef.findFirstToken(TokenTypes.RECORD_COMPONENTS);
+        final int count = components.getChildCount(TokenTypes.RECORD_COMPONENT_DEF);
+        final DetailAST objBlock = recordDef.findFirstToken(TokenTypes.OBJBLOCK);
+        if (!hasExplicitCanonicalConstructor(objBlock, count)) {
+            logRecordComponentCount(recordDef, recordDef);
+        }
+    }
+
+    /**
+     * Checks whether a record declares its canonical constructor explicitly, either
+     * as a compact constructor or in long form. A long form canonical constructor
+     * is recognised by its parameter count, which is always equal to the number of
+     * record components; any other constructor is an additional constructor and
+     * leaves the canonical constructor implicit.
+     *
+     * @param objBlock the record body to inspect
+     * @param componentCount the number of record components
+     * @return true if the canonical constructor is declared explicitly
+     */
+    private static boolean hasExplicitCanonicalConstructor(DetailAST objBlock,
+            int componentCount) {
+        boolean result = objBlock.getChildCount(TokenTypes.COMPACT_CTOR_DEF) > 0;
+        DetailAST child = objBlock.getFirstChild();
+        while (!result && child != null) {
+            if (child.getType() == TokenTypes.CTOR_DEF) {
+                final DetailAST params = child.findFirstToken(TokenTypes.PARAMETERS);
+                result = params.getChildCount(TokenTypes.PARAMETER_DEF) == componentCount;
+            }
+            child = child.getNextSibling();
+        }
+        return result;
+    }
+
+    /**
+     * Logs a violation if the number of components of a record exceeds the maximum.
+     * The component count is the parameter count of the record's canonical
+     * constructor, so it is checked against the same limit.
+     *
+     * @param ast the node to log the violation at, a compact constructor definition
+     *        or the record definition itself
+     * @param recordDef the record definition whose components are counted
+     */
+    private void logRecordComponentCount(DetailAST ast, DetailAST recordDef) {
+        final DetailAST components = recordDef.findFirstToken(TokenTypes.RECORD_COMPONENTS);
+        final int count = components.getChildCount(TokenTypes.RECORD_COMPONENT_DEF);
         if (count > max && !shouldIgnoreNumberOfParameters(ast)) {
             final DetailAST name = ast.findFirstToken(TokenTypes.IDENT);
             log(name, MSG_KEY, max, count);
