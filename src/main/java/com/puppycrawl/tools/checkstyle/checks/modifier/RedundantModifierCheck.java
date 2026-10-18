@@ -289,6 +289,10 @@ public class RedundantModifierCheck extends AbstractCheck {
             processInterfaceOrAnnotation(ast);
         }
 
+        if (ast.getType() == TokenTypes.CLASS_DEF && isRecordMember(ast)) {
+            checkForRedundantModifier(ast, TokenTypes.LITERAL_STATIC);
+        }
+
         if (jdkVersion >= JDK_17) {
             checkForRedundantModifier(ast, TokenTypes.STRICTFP);
         }
@@ -423,7 +427,8 @@ public class RedundantModifierCheck extends AbstractCheck {
                 parent = null;
             }
             else if (parent.getType() == TokenTypes.LITERAL_NEW
-                    || parent.getType() == TokenTypes.ENUM_CONSTANT_DEF) {
+                    || parent.getType() == TokenTypes.ENUM_CONSTANT_DEF
+                    || parent.getType() == TokenTypes.RECORD_DEF) {
                 checkFinal = true;
                 parent = null;
             }
@@ -556,6 +561,18 @@ public class RedundantModifierCheck extends AbstractCheck {
         return parentTypeDef != null
                 && (parentTypeDef.getType() == TokenTypes.INTERFACE_DEF
                     || parentTypeDef.getType() == TokenTypes.ANNOTATION_DEF);
+    }
+
+    /**
+     * Checks if current AST node is member of Record, not of their subnodes.
+     *
+     * @param ast AST node
+     * @return true or false
+     */
+    private static boolean isRecordMember(DetailAST ast) {
+        DetailAST parentTypeDef = ast.getParent();
+        parentTypeDef = parentTypeDef.getParent();
+        return parentTypeDef != null && parentTypeDef.getType() == TokenTypes.RECORD_DEF;
     }
 
     /**
