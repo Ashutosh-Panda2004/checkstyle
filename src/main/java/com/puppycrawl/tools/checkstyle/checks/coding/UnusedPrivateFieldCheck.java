@@ -221,6 +221,14 @@ public class UnusedPrivateFieldCheck extends AbstractCheck {
                 }
             }
             case TokenTypes.VARIABLE_DEF -> handleVariableDef(ast);
+            case TokenTypes.LAMBDA -> {
+                if (ast.findFirstToken(TokenTypes.PARAMETERS) == null) {
+                    final DetailAST paramIdent = ast.findFirstToken(TokenTypes.IDENT);
+                    final Map<String, String> lambdaScope = new HashMap<>();
+                    lambdaScope.put(paramIdent.getText(), null);
+                    scopeStack.push(lambdaScope);
+                }
+            }
             case TokenTypes.IDENT -> handleIdent(ast);
             default -> {
                 // no action needed for other token types
@@ -241,11 +249,7 @@ public class UnusedPrivateFieldCheck extends AbstractCheck {
                 snapshot.forEach(scopeStack::push);
                 enclosingTypeNames.pop();
             }
-            case TokenTypes.LAMBDA -> {
-                if (ast.findFirstToken(TokenTypes.PARAMETERS) != null) {
-                    scopeStack.pop();
-                }
-            }
+            case TokenTypes.LAMBDA -> scopeStack.pop();
             case TokenTypes.METHOD_DEF, TokenTypes.CTOR_DEF,
                  TokenTypes.SLIST, TokenTypes.LITERAL_FOR,
                  TokenTypes.LITERAL_CATCH -> scopeStack.pop();
@@ -487,8 +491,9 @@ public class UnusedPrivateFieldCheck extends AbstractCheck {
 
     /**
      * Checks whether the given parent node is a declaration site whose IDENT child
-     * names the declared element itself (a variable, method, constructor, or type),
-     * rather than referencing some other field.
+     * names the declared element itself (a variable, method, constructor, type,
+     * pattern variable, record component, or enum constant), rather than
+     * referencing some other field.
      *
      * @param parent the parent of the IDENT being inspected.
      * @return true if the IDENT is a declaration name, not a usage.
@@ -501,7 +506,10 @@ public class UnusedPrivateFieldCheck extends AbstractCheck {
                 || type == TokenTypes.INTERFACE_DEF
                 || type == TokenTypes.ENUM_DEF
                 || type == TokenTypes.RECORD_DEF
-                || type == TokenTypes.ANNOTATION_DEF;
+                || type == TokenTypes.ANNOTATION_DEF
+                || type == TokenTypes.PATTERN_VARIABLE_DEF
+                || type == TokenTypes.RECORD_COMPONENT_DEF
+                || type == TokenTypes.ENUM_CONSTANT_DEF;
     }
 
     /**
