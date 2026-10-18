@@ -141,6 +141,34 @@ public class NPathComplexityCheckTest extends AbstractModuleTestSupport {
                 getPath("InputNPathComplexityOverflow.java"), expected);
     }
 
+    @Test
+    public void testLongBooleanExpression() throws Exception {
+        final String[] expected = {
+            "13:5: " + getCheckMessage(MSG_KEY, 299, 200),
+        };
+
+        verifyWithInlineConfigParser(
+                getPath("InputNPathComplexityLongBooleanExpression.java"), expected);
+    }
+
+    @Test
+    public void testNoStackOverflowOnDeepBooleanExpression() throws Exception {
+        final String[] expected = {
+            "13:5: " + getCheckMessage(MSG_KEY, 2799, 200),
+        };
+
+        // Limited stack size ensures that a recursive traversal of the deeply
+        // nested boolean expression throws StackOverflowError
+        final boolean completed = TestUtil.getResultWithLimitedResources(() -> {
+            verifyWithInlineConfigParser(
+                    getPath("InputNPathComplexityDeepBooleanExpression.java"), expected);
+            return true;
+        });
+        assertWithMessage("Check should process deeply nested expression without failure")
+                .that(completed)
+                .isTrue();
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     public void testStatefulFieldsClearedOnBeginTree1() {

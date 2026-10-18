@@ -470,16 +470,29 @@ public final class NPathComplexityCheck extends AbstractCheck {
      */
     private static int countConditionalOperators(DetailAST ast) {
         int number = 0;
-        for (DetailAST child = ast.getFirstChild(); child != null;
-                child = child.getNextSibling()) {
-            final int type = child.getType();
+        DetailAST node = ast.getFirstChild();
+        while (node != null) {
+            final int type = node.getType();
             if (type == TokenTypes.LOR || type == TokenTypes.LAND) {
                 number++;
             }
             else if (type == TokenTypes.QUESTION) {
                 number += 2;
             }
-            number += countConditionalOperators(child);
+            DetailAST next = node.getFirstChild();
+            if (next == null) {
+                next = node;
+                while (next != ast && next.getNextSibling() == null) {
+                    next = next.getParent();
+                }
+                if (next == ast) {
+                    next = null;
+                }
+                else {
+                    next = next.getNextSibling();
+                }
+            }
+            node = next;
         }
         return number;
     }
